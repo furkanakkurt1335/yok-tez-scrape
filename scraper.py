@@ -1,11 +1,18 @@
-import requests
-import re
-import logging
+import requests, re, logging, os, json
+from bs4 import BeautifulSoup
+
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def fetch_pdf_files(till=798285):
+def get_l_from_br(text):
+    while '  ' in text:
+        text = text.replace('  ', ' ')
+    l = [i.strip() for i in text.split('<br/>')]
+    return l
+
+def fetch_pdf_files(start_id=1, end_id=798285, get_pdfs=True, get_mds=True, get_sources=False):
     """
     Fetches PDF files from a website using a search and download process.
 
@@ -18,6 +25,22 @@ def fetch_pdf_files(till=798285):
     Returns:
     None
     """
+
+    if get_pdfs:
+        pdf_dir = os.path.join(THIS_DIR, 'pdfs')
+        if not os.path.exists(pdf_dir):
+            os.makedirs(pdf_dir)
+    if get_mds:
+        md_path = os.path.join(THIS_DIR, 'md.json')
+        if not os.path.exists(md_path):
+            with open(md_path, 'w') as f:
+                json.dump({}, f)
+        with open(md_path, 'r') as f:
+            md_d = json.load(f)
+    if get_sources:
+        source_dir = os.path.join(THIS_DIR, 'sources')
+        if not os.path.exists(source_dir):
+            os.makedirs(source_dir)
 
     session = requests.Session()
     session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
@@ -32,7 +55,7 @@ def fetch_pdf_files(till=798285):
     id_pattern = re.compile('onclick=tezDetay\(\'(.*?)\',')
     pdf_pattern = re.compile('<a href="TezGoster\?key=(.*?)"')
 
-    for i in range(1, till + 1):
+    for i in range(start_id, end_id + 1):
         form_data = payload_d.copy()
         form_data['TezNo'] = i
 
@@ -54,25 +77,65 @@ def fetch_pdf_files(till=798285):
 
                 text = tez_detay_response.text
 
-                # Extract PDF key
-                pdf_search = pdf_pattern.search(text)
-                if pdf_search:
-                    key_t = pdf_search.group(1)
+                if get_sources:
+                    with open(os.path.join(source_dir, f'{i}.html'), 'w', encoding='utf-8') as f:
+                        f.write(text)
+                        logger.info(f'{i}.html saved')
 
-                    # Send download request
-                    download_response = session.get(download_url.format(key_t=key_t))
-                    download_response.raise_for_status()
+                if get_mds:
+                    soup = BeautifulSoup(text, 'html.parser')
+                    md_l = soup.find_all('td', {'valign': 'top'})
+                    d_t = {}
+                    if len(md_l) == 4:
+                        kunye = md_l[2]
+                        for i, child in enumerate(kunye.children):
+                            child_str = str(child).strip()
+                            if i == 0:
+                                d_t['title'] = child_str
+                            elif i == 2:
+                                d_t['author'] = child_str.split(':')[1].strip()
+                            elif i == 4:
+                                d_t['advisor'] = child_str.split(':')[1].strip()
+                            elif i == 6:
+                                d_t['university'] = child_str.split(':')[1].strip()
+                            elif i == 8:
+                                d_t['topic'] = child_str.split(':')[1].strip()
+                            elif i == 10:
+                                d_t['index'] = child_str.split(':')[1].strip()
+                        status = md_l[3]
+                        for i, child in enumerate(status.children):
+                            child_str = str(child).strip()
+                            if i == 2:
+                                d_t['type'] = child_str
+                            elif i == 6:
+                                d_t['year'] = child_str
+                            elif i == 8:
+                                d_t['page_count'] = child_str
+                        md_d[str(i)] = d_t
 
-                    # Save PDF file
-                    with open(f'pdf/{i}.pdf', 'wb') as f:
-                        f.write(download_response.content)
-                        logger.info(f'{i}.pdf saved')
+                if get_pdfs:
+                    # Extract PDF key
+                    pdf_search = pdf_pattern.search(text)
+                    if pdf_search:
+                        key_t = pdf_search.group(1)
+
+                        # Send download request
+                        download_response = session.get(download_url.format(key_t=key_t))
+                        download_response.raise_for_status()
+
+                        # Save PDF file
+                        with open(os.path.join(pdf_dir, f'{i}.pdf'), 'wb') as f:
+                            f.write(download_response.content)
+                            logger.info(f'{i}.pdf saved')
+
+            with open(md_path, 'w') as f:
+                json.dump(md_d, f)
 
         except (requests.RequestException, IOError) as e:
             logger.error(f'Error occurred while fetching PDF for TezNo {i}: {str(e)}')
 
         except Exception as e:
             logger.error(f'Unexpected error occurred while fetching PDF for TezNo {i}: {str(e)}')
-
+        
 # Call the function to start fetching PDF files
-fetch_pdf_files()
+fetch_pdf_files(start_id=300, end_id=350, get_pdfs=False, get_mds=True, get_sources=False)
