@@ -6,12 +6,6 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def get_l_from_br(text):
-    while '  ' in text:
-        text = text.replace('  ', ' ')
-    l = [i.strip() for i in text.split('<br/>')]
-    return l
-
 def fetch_pdf_files(start_id=1, end_id=798285, get_pdfs=True, get_mds=True, get_sources=False):
     """
     Fetches PDF files from a website using a search and download process.
