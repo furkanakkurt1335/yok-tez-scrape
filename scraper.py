@@ -122,14 +122,14 @@ def fetch_pdf_files(start_id=1, end_id=798285, get_pdfs=True, get_mds=True, get_
                             f.write(download_response.content)
                             logger.info(f'{i}.pdf saved')
 
-            with open(md_path, 'w') as f:
-                json.dump(md_d, f, ensure_ascii=False, indent=4)
-
         except (requests.RequestException, IOError) as e:
             logger.error(f'Error occurred while fetching PDF for TezNo {i}: {str(e)}')
 
         except Exception as e:
             logger.error(f'Unexpected error occurred while fetching PDF for TezNo {i}: {str(e)}')
-        
+
+        with open(md_path, 'w') as f:
+            json.dump(md_d, f, ensure_ascii=False, indent=4)
+
 # Call the function to start fetching PDF files
 fetch_pdf_files(get_pdfs=False, get_mds=True, get_sources=False)
