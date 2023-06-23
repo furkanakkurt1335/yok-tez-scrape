@@ -82,28 +82,28 @@ def fetch_pdf_files(start_id=1, end_id=798285, get_pdfs=True, get_mds=True, get_
                     d_t = {}
                     if len(md_l) == 4:
                         kunye = md_l[2]
-                        for i, child in enumerate(kunye.children):
+                        for j, child in enumerate(kunye.children):
                             child_str = str(child).strip()
-                            if i == 0:
+                            if j == 0:
                                 d_t['title'] = child_str
-                            elif i == 2:
+                            elif j == 2:
                                 d_t['author'] = child_str.split(':')[1].strip()
-                            elif i == 4:
+                            elif j == 4:
                                 d_t['advisor'] = child_str.split(':')[1].strip()
-                            elif i == 6:
+                            elif j == 6:
                                 d_t['university'] = child_str.split(':')[1].strip()
-                            elif i == 8:
+                            elif j == 8:
                                 d_t['topic'] = child_str.split(':')[1].strip()
-                            elif i == 10:
+                            elif j == 10:
                                 d_t['index'] = child_str.split(':')[1].strip()
                         status = md_l[3]
-                        for i, child in enumerate(status.children):
+                        for j, child in enumerate(status.children):
                             child_str = str(child).strip()
-                            if i == 2:
+                            if j == 2:
                                 d_t['type'] = child_str
-                            elif i == 6:
+                            elif j == 6:
                                 d_t['year'] = child_str
-                            elif i == 8:
+                            elif j == 8:
                                 d_t['page_count'] = child_str
                         md_d[str(i)] = d_t
 
